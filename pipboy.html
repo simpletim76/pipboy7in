@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1024, initial-scale=1.0">
+<title>NERD-O-VISION 5000 — VAULT-TEC</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap');
+
+  :root {
+    --green: #39ff14;
+    --green-dim: #1a7a00;
+    --green-faint: #0d3d00;
+    --green-glow: #39ff14;
+    --amber: #ffb000;
+    --bg: #030a00;
+    --scanline-color: rgba(0,0,0,0.18);
+    --panel-bg: rgba(0, 15, 0, 0.85);
+    --border: #1a5c00;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 1024px;
+    height: 600px;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--green);
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  /* CRT Screen wrapper */
+  #screen {
+    width: 1024px;
+    height: 600px;
+    position: relative;
+    overflow: hidden;
+    background: var(--bg);
+  }
+
+  /* Phosphor scanlines overlay */
+  #screen::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      to bottom,
+      var(--scanline-color) 0px,
+      var(--scanline-color) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  /* CRT vignette */
+  #screen::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center,
+      transparent 55%,
+      rgba(0,0,0,0.7) 100%
+    );
+    pointer-events: none;
+    z-index: 101;
+  }
+
+  /* Phosphor flicker */
+  @keyframes flicker {
+    0%   { opacity: 1; }
+    92%  { opacity: 1; }
+    93%  { opacity: 0.96; }
+    94%  { opacity: 1; }
+    96%  { opacity: 0.98; }
+    100% { opacity: 1; }
+  }
+
+  #main {
+    width: 100%;
+    height: 100%;
+    animation: flicker 6s infinite;
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-rows: 58px 1fr 46px;
+    grid-template-columns: 1fr;
+    padding: 10px 14px;
+    gap: 8px;
+  }
+
+  /* ===== HEADER ===== */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--green-dim);
+    padding-bottom: 6px;
+  }
+
+  .logo-block {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+  }
+
+  .logo-top {
+    font-family: 'VT323', monospace;
+    font-size: 26px;
+    color: var(--green);
+    text-shadow:
+      0 0 8px var(--green-glow),
+      0 0 20px var(--green-glow),
+      0 0 40px #00ff0060;
+    letter-spacing: 3px;
+  }
+
+  .logo-sub {
+    font-size: 9px;
+    color: var(--green-dim);
+    letter-spacing: 3px;
+    margin-top: 2px;
+  }
+
+  .header-center {
+    text-align: center;
+  }
+
+  #clock {
+    font-family: 'VT323', monospace;
+    font-size: 36px;
+    color: var(--green);
+    text-shadow: 0 0 10px var(--green-glow), 0 0 25px #00ff0050;
+    letter-spacing: 3px;
+  }
+
+  #date {
+    font-size: 10px;
+    color: var(--green-dim);
+    letter-spacing: 2px;
+    margin-top: 1px;
+  }
+
+  .header-right {
+    text-align: right;
+    font-size: 10px;
+    color: var(--green-dim);
+    line-height: 1.7;
+  }
+
+  .header-right span {
+    color: var(--green);
+  }
+
+  /* ===== BODY GRID ===== */
+  .body {
+    display: grid;
+    grid-template-columns: 200px 1fr 190px;
+    gap: 8px;
+  }
+
+  .body {
+    display: grid;
+    grid-template-columns: 200px 1fr 190px;
+    gap: 10px;
+  }
+
+  /* ===== PANELS ===== */
+  .panel {
+    border: 1px solid var(--border);
+    background: var(--panel-bg);
+    padding: 12px 14px;
+    position: relative;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    transition:
+      transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1),
+      box-shadow 0.18s ease,
+      border-color 0.18s ease,
+      z-index 0s;
+    will-change: transform;
+    border-radius: 2px;
+  }
+
+  .panel:active,
+  .panel.pressed {
+    transform: scale(1.045);
+    box-shadow:
+      0 0 18px #39ff1455,
+      0 0 40px #39ff1422,
+      inset 0 0 12px #39ff1415;
+    border-color: var(--green);
+    z-index: 10;
+  }
+
+  .panel::before {
+    content: attr(data-label);
+    position: absolute;
+    top: -1px;
+    left: 12px;
+    transform: translateY(-50%);
+    background: var(--bg);
+    padding: 0 6px;
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--green-dim);
+    pointer-events: none;
+  }
+
+  /* Touch ripple on press */
+  .panel::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 2px;
+    background: radial-gradient(ellipse at center, #39ff1412 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    pointer-events: none;
+  }
+
+  .panel:active::after,
+  .panel.pressed::after {
+    opacity: 1;
+  }
+
+  /* ── EXPANDED PANEL OVERLAY ── */
+  #panel-overlay {
+    display: none;
+    position: absolute;
+    inset: 8px;
+    z-index: 500;
+    background: rgba(2, 10, 2, 0.97);
+    border: 1px solid var(--green);
+    box-shadow:
+      0 0 30px #39ff1440,
+      0 0 80px #39ff1418,
+      inset 0 0 20px #39ff1408;
+    padding: 16px 18px;
+    overflow: hidden;
+    animation: overlay-in 0.22s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+  }
+
+  #panel-overlay.closing {
+    animation: overlay-out 0.16s ease-in forwards;
+  }
+
+  @keyframes overlay-in {
+    from { opacity: 0; transform: scale(0.94); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  @keyframes overlay-out {
+    from { opacity: 1; transform: scale(1); }
+    to   { opacity: 0; transform: scale(0.96); }
+  }
+
+  #panel-overlay-close {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    font-family: 'VT323', monospace;
+    font-size: 22px;
+    color: var(--green-dim);
+    cursor: pointer;
+    letter-spacing: 1px;
+    padding: 4px 10px;
+    border: 1px solid var(--green-dim);
+    transition: color 0.1s, border-color 0.1s;
+    touch-action: manipulation;
+  }
+
+  #panel-overlay-close:active,
+  #panel-overlay-close:hover {
+    color: var(--green);
+    border-color: var(--green);
+  }
+
+  #panel-overlay-title {
+    font-family: 'VT323', monospace;
+    font-size: 26px;
+    color: var(--green);
+    text-shadow: 0 0 10px var(--green-glow);
+    letter-spacing: 3px;
+    border-bottom: 1px solid var(--green-dim);
+    padding-bottom: 8px;
+    margin-bottom: 14px;
+  }
+
+  #panel-overlay-content {
+    font-size: 13px;
+    line-height: 2;
+    color: var(--green);
+  }
+
+  #panel-overlay-content .ov-row {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--green-faint);
+    padding: 4px 0;
+  }
+
+  #panel-overlay-content .ov-key {
+    color: var(--green-dim);
+    letter-spacing: 2px;
+    font-size: 11px;
+  }
+
+  #panel-overlay-content .ov-val {
+    color: var(--green);
+    font-size: 14px;
+    text-shadow: 0 0 6px var(--green-glow);
+  }
+
+  #panel-overlay-content .ov-bar-wrap {
+    margin: 6px 0 10px;
+  }
+
+  #panel-overlay-content .ov-bar-label {
+    font-size: 10px;
+    color: var(--green-dim);
+    letter-spacing: 2px;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+
+  #panel-overlay-content .ov-bar-track {
+    height: 14px;
+    background: var(--green-faint);
+    border: 1px solid var(--green-dim);
+    position: relative;
+    overflow: hidden;
+  }
+
+  #panel-overlay-content .ov-bar-fill {
+    height: 100%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green-glow);
+    transition: width 0.8s ease;
+  }
+
+  #panel-overlay-content .ov-bar-fill.danger { background: #ff3300; box-shadow: 0 0 8px #ff3300; }
+  #panel-overlay-content .ov-bar-fill.warn   { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+
+  .panel-title {
+    font-family: 'VT323', monospace;
+    font-size: 20px;
+    color: var(--green);
+    text-shadow: 0 0 8px var(--green-glow);
+    letter-spacing: 2px;
+    border-bottom: 1px solid var(--green-faint);
+    padding-bottom: 5px;
+    margin-bottom: 10px;
+  }
+
+  /* ===== S.P.E.C.I.A.L. PANEL ===== */
+  .special-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .special-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .special-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--green-dim);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .special-label .val {
+    color: var(--green);
+    font-size: 11px;
+  }
+
+  .bar-track {
+    width: 100%;
+    height: 6px;
+    background: var(--green-faint);
+    border: 1px solid var(--green-dim);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green-glow);
+    transition: width 1s ease;
+    position: relative;
+  }
+
+  .bar-fill::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    background: #fff;
+    opacity: 0.7;
+    box-shadow: 0 0 4px #fff;
+  }
+
+  /* Danger coloring */
+  .bar-fill.danger { background: #ff3300; box-shadow: 0 0 6px #ff3300; }
+  .bar-fill.warn   { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+
+  /* ===== CENTER PANEL ===== */
+  .center-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* Radial gauges row */
+  .gauges-row {
+    display: flex;
+    gap: 10px;
+    justify-content: space-around;
+    padding: 8px 0;
+  }
+
+  .gauge-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .gauge-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--green-dim);
+  }
+
+  .gauge {
+    width: 90px;
+    height: 90px;
+    position: relative;
+  }
+
+  .gauge svg {
+    width: 90px;
+    height: 90px;
+    transform: rotate(-90deg);
+  }
+
+  .gauge-bg {
+    fill: none;
+    stroke: var(--green-faint);
+    stroke-width: 6;
+  }
+
+  .gauge-arc {
+    fill: none;
+    stroke: var(--green);
+    stroke-width: 6;
+    stroke-linecap: butt;
+    filter: drop-shadow(0 0 4px var(--green-glow));
+    transition: stroke-dasharray 1s ease;
+    stroke-dashoffset: 0;
+  }
+
+  .gauge-arc.danger { stroke: #ff3300; filter: drop-shadow(0 0 4px #ff3300); }
+  .gauge-arc.warn   { stroke: var(--amber); filter: drop-shadow(0 0 4px var(--amber)); }
+
+  .gauge-text {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.1;
+  }
+
+  .gauge-num {
+    font-family: 'VT323', monospace;
+    font-size: 22px;
+    color: var(--green);
+    text-shadow: 0 0 8px var(--green-glow);
+  }
+
+  .gauge-unit {
+    font-size: 8px;
+    color: var(--green-dim);
+    letter-spacing: 1px;
+  }
+
+  /* Network table */
+  .net-table {
+    font-size: 11px;
+    line-height: 1.9;
+    width: 100%;
+  }
+
+  .net-row {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--green-faint);
+  }
+
+  .net-row:last-child { border-bottom: none; }
+
+  .net-key {
+    color: var(--green-dim);
+    letter-spacing: 1px;
+    font-size: 10px;
+  }
+
+  .net-val {
+    color: var(--green);
+    text-shadow: 0 0 5px var(--green-glow);
+    font-size: 11px;
+  }
+
+  /* Activity graph */
+  .activity-wrap {
+    position: relative;
+  }
+
+  .activity-label {
+    font-size: 9px;
+    color: var(--green-dim);
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+  }
+
+  #activity-canvas {
+    width: 100%;
+    height: 55px;
+    display: block;
+    border: 1px solid var(--green-faint);
+    background: var(--green-faint);
+  }
+
+  /* ===== VAULT DWELLER FIGURE ===== */
+  .figure-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    margin: -4px 0 4px 0;
+  }
+
+  .vault-figure {
+    width: 160px;
+    height: 160px;
+    filter: drop-shadow(0 0 6px #39ff14) drop-shadow(0 0 18px #00ff0050);
+    animation: figure-breathe 4s ease-in-out infinite;
+  }
+
+  @keyframes atom-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+
+  @keyframes figure-breathe {
+    0%, 100% { filter: drop-shadow(0 0 6px #39ff14) drop-shadow(0 0 16px #00ff0040); }
+    50%       { filter: drop-shadow(0 0 10px #39ff14) drop-shadow(0 0 28px #00ff0070); }
+  }
+
+  .fig-uptime {
+    text-align: center;
+    margin-top: -2px;
+    margin-bottom: 2px;
+  }
+
+  /* ===== RIGHT PANEL ===== */
+  .disk-section { margin-bottom: 6px; }
+
+  .disk-label {
+    font-size: 9px;
+    color: var(--green-dim);
+    letter-spacing: 2px;
+    margin-bottom: 3px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .disk-label span { color: var(--green); }
+
+  .uptime-block {
+    text-align: center;
+    border: 1px solid var(--green-faint);
+    padding: 8px;
+    margin-bottom: 10px;
+  }
+
+  .uptime-num {
+    font-family: 'VT323', monospace;
+    font-size: 26px;
+    color: var(--green);
+    text-shadow: 0 0 8px var(--green-glow);
+    letter-spacing: 2px;
+  }
+
+  .uptime-label {
+    font-size: 9px;
+    color: var(--green-dim);
+    letter-spacing: 2px;
+  }
+
+  .status-lights {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 4px;
+  }
+
+  .status-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    color: var(--green-dim);
+    letter-spacing: 1px;
+  }
+
+  .led {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green-glow), 0 0 12px var(--green-glow);
+    flex-shrink: 0;
+  }
+
+  .led.blink {
+    animation: blink 1.2s step-start infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.1; }
+  }
+
+  .led.red { background: #ff3300; box-shadow: 0 0 6px #ff3300; }
+  .led.amber { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+
+  /* ===== FOOTER ===== */
+  footer {
+    border-top: 1px solid var(--green-dim);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 5px;
+    font-size: 10px;
+  }
+
+  #quote-text {
+    flex: 1;
+    color: var(--green-dim);
+    font-style: italic;
+    letter-spacing: 1px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    padding-right: 20px;
+  }
+
+  .footer-right {
+    font-size: 9px;
+    color: var(--green-dim);
+    letter-spacing: 2px;
+    white-space: nowrap;
+  }
+
+  .footer-right span { color: var(--green); }
+
+  /* ===== BOOT OVERLAY ===== */
+  #boot-overlay {
+    position: absolute;
+    inset: 0;
+    background: var(--bg);
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    font-family: 'VT323', monospace;
+  }
+
+  #boot-logo {
+    font-size: 72px;
+    color: var(--green);
+    text-shadow: 0 0 20px var(--green-glow), 0 0 60px #00ff0040;
+    letter-spacing: 8px;
+    animation: pulse-logo 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse-logo {
+    0%, 100% { text-shadow: 0 0 20px var(--green-glow), 0 0 60px #00ff0040; }
+    50%       { text-shadow: 0 0 40px var(--green-glow), 0 0 100px #00ff0080; }
+  }
+
+  #boot-sub { font-size: 18px; letter-spacing: 5px; color: var(--green-dim); }
+
+  #boot-log {
+    font-size: 13px;
+    color: var(--green-dim);
+    text-align: left;
+    width: 400px;
+    line-height: 1.8;
+  }
+
+  .boot-line { opacity: 0; animation: fadein 0.1s forwards; }
+  @keyframes fadein { to { opacity: 1; } }
+
+  /* Noise texture overlay */
+  @keyframes noise-anim {
+    0%   { transform: translate(0,0); }
+    10%  { transform: translate(-2%, -3%); }
+    20%  { transform: translate(4%, 2%); }
+    30%  { transform: translate(-3%, 4%); }
+    40%  { transform: translate(2%, -2%); }
+    50%  { transform: translate(-4%, 1%); }
+    60%  { transform: translate(3%, 3%); }
+    70%  { transform: translate(-1%, -4%); }
+    80%  { transform: translate(4%, 0%); }
+    90%  { transform: translate(-2%, 3%); }
+    100% { transform: translate(0, 0); }
+  }
+
+  #noise {
+    position: absolute;
+    inset: -50%;
+    width: 200%;
+    height: 200%;
+    pointer-events: none;
+    z-index: 99;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    animation: noise-anim 0.15s steps(1) infinite;
+  }
+</style>
+</head>
+<body>
+
+<div id="screen">
+  <div id="noise"></div>
+
+  <!-- Boot overlay -->
+  <div id="boot-overlay">
+    <div id="boot-logo">PIP-BOY</div>
+    <div id="boot-sub">VAULT-TEC INDUSTRIES</div>
+    <div id="boot-log"></div>
+  </div>
+
+  <div id="main">
+
+    <!-- HEADER -->
+    <header>
+      <div class="logo-block">
+        <div class="logo-top">NERD-O-VISION 5000</div>
+        <div class="logo-sub">ROBCO INDUSTRIES UNIFIED OPERATING SYSTEM</div>
+      </div>
+      <div class="header-center">
+        <div id="clock">00:00:00</div>
+        <div id="date">LOADING...</div>
+      </div>
+      <div class="header-right">
+        HOST: <span id="hostname-hdr">---</span><br>
+        IP: <span id="ip-hdr">---</span><br>
+        SSID: <span id="ssid-hdr">---</span>
+      </div>
+    </header>
+
+    <!-- BODY -->
+    <div class="body">
+
+      <!-- LEFT: S.P.E.C.I.A.L bars -->
+      <div class="panel" data-label="[ SYSTEM VITALS ]" data-panel-key="stats">
+        <div class="panel-title">◈ S.T.A.T.S</div>
+        <div class="special-grid">
+          <div class="special-item">
+            <div class="special-label">CPU LOAD <span class="val" id="cpu-val">--%</span></div>
+            <div class="bar-track"><div class="bar-fill" id="cpu-bar" style="width:0%"></div></div>
+          </div>
+          <div class="special-item">
+            <div class="special-label">MEMORY <span class="val" id="ram-val">--%</span></div>
+            <div class="bar-track"><div class="bar-fill" id="ram-bar" style="width:0%"></div></div>
+          </div>
+          <div class="special-item">
+            <div class="special-label">CPU TEMP <span class="val" id="temp-val">--°C</span></div>
+            <div class="bar-track"><div class="bar-fill" id="temp-bar" style="width:0%"></div></div>
+          </div>
+          <div class="special-item">
+            <div class="special-label">DISK USED <span class="val" id="disk-val">--%</span></div>
+            <div class="bar-track"><div class="bar-fill" id="disk-bar" style="width:0%"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CENTER -->
+      <div class="panel center-panel" data-label="[ OPERATIONAL STATUS ]" data-panel-key="monitor">
+        <div class="panel-title">◈ SYSTEM MONITOR</div>
+
+        <!-- Radial gauges -->
+        <div class="gauges-row">
+          <div class="gauge-wrap">
+            <div class="gauge">
+              <svg viewBox="0 0 90 90">
+                <circle class="gauge-bg" cx="45" cy="45" r="36"/>
+                <circle class="gauge-arc" id="cpu-arc" cx="45" cy="45" r="36"
+                  stroke-dasharray="0 226.2"/>
+              </svg>
+              <div class="gauge-text">
+                <div class="gauge-num" id="cpu-gauge-num">0</div>
+                <div class="gauge-unit">CPU%</div>
+              </div>
+            </div>
+            <div class="gauge-label">PROCESSOR</div>
+          </div>
+          <div class="gauge-wrap">
+            <div class="gauge">
+              <svg viewBox="0 0 90 90">
+                <circle class="gauge-bg" cx="45" cy="45" r="36"/>
+                <circle class="gauge-arc" id="ram-arc" cx="45" cy="45" r="36"
+                  stroke-dasharray="0 226.2"/>
+              </svg>
+              <div class="gauge-text">
+                <div class="gauge-num" id="ram-gauge-num">0</div>
+                <div class="gauge-unit">MEM%</div>
+              </div>
+            </div>
+            <div class="gauge-label">MEMORY</div>
+          </div>
+          <div class="gauge-wrap">
+            <div class="gauge">
+              <svg viewBox="0 0 90 90">
+                <circle class="gauge-bg" cx="45" cy="45" r="36"/>
+                <circle class="gauge-arc" id="temp-arc" cx="45" cy="45" r="36"
+                  stroke-dasharray="0 226.2"/>
+              </svg>
+              <div class="gauge-text">
+                <div class="gauge-num" id="temp-gauge-num">--</div>
+                <div class="gauge-unit">°C</div>
+              </div>
+            </div>
+            <div class="gauge-label">TEMPERATURE</div>
+          </div>
+        </div>
+
+        <!-- Activity graph -->
+        <div class="activity-wrap">
+          <div class="activity-label">CPU ACTIVITY WAVEFORM ─────────────────────</div>
+          <canvas id="activity-canvas" height="55"></canvas>
+        </div>
+
+        <!-- Network -->
+        <div class="net-table" style="margin-top:8px;">
+          <div class="net-row">
+            <span class="net-key">◦ NETWORK ADDR</span>
+            <span class="net-val" id="net-ip">---</span>
+          </div>
+          <div class="net-row">
+            <span class="net-key">◦ WIFI NETWORK</span>
+            <span class="net-val" id="net-ssid">---</span>
+          </div>
+          <div class="net-row">
+            <span class="net-key">◦ HOSTNAME</span>
+            <span class="net-val" id="net-host">---</span>
+          </div>
+          <div class="net-row">
+            <span class="net-key">◦ RAM TOTAL</span>
+            <span class="net-val" id="net-ram">---</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT -->
+      <div class="panel" data-label="[ UNIT STATUS ]" data-panel-key="unit">
+        <div class="panel-title">◈ UNIT INFO</div>
+
+        <!-- Atom symbol -->
+        <div class="figure-wrap">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" class="vault-figure">
+            <defs>
+              <filter id="fig-glow" x="-40%" y="-40%" width="180%" height="180%">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur"/>
+                <feBlend in="SourceGraphic" in2="blur" mode="screen"/>
+              </filter>
+              <filter id="nucleus-glow" x="-100%" y="-100%" width="300%" height="300%">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur"/>
+                <feBlend in="SourceGraphic" in2="blur" mode="screen"/>
+              </filter>
+              <filter id="electron-glow" x="-150%" y="-150%" width="400%" height="400%">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur"/>
+                <feBlend in="SourceGraphic" in2="blur" mode="screen"/>
+              </filter>
+            </defs>
+
+            <g filter="url(#fig-glow)" fill="none" stroke="#39ff14">
+
+              <!-- Orbit 1: horizontal ellipse (0°) -->
+              <ellipse cx="100" cy="100" rx="88" ry="28" stroke-width="2.5"/>
+
+              <!-- Orbit 2: rotated 60° -->
+              <ellipse cx="100" cy="100" rx="88" ry="28"
+                       stroke-width="2.5"
+                       transform="rotate(60 100 100)"/>
+
+              <!-- Orbit 3: rotated 120° (= -60°) -->
+              <ellipse cx="100" cy="100" rx="88" ry="28"
+                       stroke-width="2.5"
+                       transform="rotate(120 100 100)"/>
+
+            </g>
+
+            <!-- Electrons: one per orbit at the right-tip of each ellipse in its rotated frame -->
+            <!-- Orbit 1 (0°): right tip = (100+88, 100) = (188, 100) -->
+            <circle cx="188" cy="100" r="7" fill="#39ff14" filter="url(#electron-glow)"/>
+
+            <!-- Orbit 2 (60°): right tip of ellipse before rotation = (188,100),
+                 after rotate(60 100 100):
+                 dx=88, dy=0 → rotated: x=100+88*cos60=100+44=144, y=100+88*sin60=100+76.2=176.2 -->
+            <circle cx="144" cy="176" r="7" fill="#39ff14" filter="url(#electron-glow)"/>
+
+            <!-- Orbit 3 (120°): right tip rotated 120°:
+                 x=100+88*cos120=100-44=56, y=100+88*sin120=100+76.2=176.2 -->
+            <circle cx="56" cy="176" r="7" fill="#39ff14" filter="url(#electron-glow)"/>
+
+            <!-- Nucleus glow layer -->
+            <circle cx="100" cy="100" r="18" fill="#39ff14" opacity="0.25" filter="url(#nucleus-glow)"/>
+            <!-- Nucleus solid -->
+            <circle cx="100" cy="100" r="13" fill="#39ff14"/>
+            <!-- Nucleus inner ring detail -->
+            <circle cx="100" cy="100" r="7" fill="#0d3d00"/>
+            <circle cx="100" cy="100" r="4" fill="#39ff14" opacity="0.6"/>
+
+          </svg>
+
+          <!-- Uptime below atom -->
+          <div class="fig-uptime">
+            <div class="uptime-label">UPTIME</div>
+            <div class="uptime-num" id="uptime-val">--h --m</div>
+          </div>
+        </div>
+
+        <!-- Compact disk + status below -->
+        <div class="disk-section" style="margin-top:4px;">
+          <div class="disk-label">STORAGE <span id="disk-info-val">-- / -- GB</span></div>
+          <div class="bar-track" style="height:6px">
+            <div class="bar-fill" id="disk-bar2" style="width:0%"></div>
+          </div>
+        </div>
+
+        <div class="status-lights">
+          <div class="status-row"><div class="led blink" id="led-net"></div> NETWORK LINK</div>
+          <div class="status-row"><div class="led" id="led-cpu"></div> PROCESSOR ONLINE</div>
+          <div class="status-row"><div class="led" id="led-mem"></div> MEMORY NOMINAL</div>
+          <div class="status-row"><div class="led" id="led-temp"></div> THERMAL NOMINAL</div>
+          <div class="status-row"><div class="led blink" id="led-hb" style="animation-duration:2s"></div> HEARTBEAT</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer>
+      <div id="quote-text">"War. War never changes."</div>
+      <div class="footer-right">VAULT-TEC ◈ NERD-O-VISION 5000 ◈ BUILD <span>2077.10.23</span></div>
+    </footer>
+
+  </div><!-- /main -->
+
+  <!-- Expanded panel overlay -->
+  <div id="panel-overlay">
+    <div id="panel-overlay-close">[ CLOSE ✕ ]</div>
+    <div id="panel-overlay-title">PANEL</div>
+    <div id="panel-overlay-content"></div>
+  </div>
+
+</div><!-- /screen -->
+
+<script>
+// ===== CONSTANTS =====
+const API = 'http://localhost:5000/stats';
+const CIRCUMFERENCE = 2 * Math.PI * 36; // 226.2
+
+// ===== CLOCK =====
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  const s = String(now.getSeconds()).padStart(2,'0');
+  document.getElementById('clock').textContent = `${h}:${m}:${s}`;
+
+  const days = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
+  const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  document.getElementById('date').textContent =
+    `${days[now.getDay()]} ${String(now.getDate()).padStart(2,'0')} ${months[now.getMonth()]} ${now.getFullYear()}`;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ===== ACTIVITY GRAPH =====
+const canvas = document.getElementById('activity-canvas');
+const ctx = canvas.getContext('2d');
+const W = 600, H = 55;
+canvas.width = W;
+canvas.height = H;
+let history = new Array(120).fill(0);
+
+function drawGraph() {
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#0d3d00';
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid lines
+  ctx.strokeStyle = '#1a5c0030';
+  ctx.lineWidth = 1;
+  for (let y = 0; y <= H; y += H/4) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+  for (let x = 0; x <= W; x += W/12) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+  }
+
+  // Fill
+  ctx.beginPath();
+  const step = W / (history.length - 1);
+  ctx.moveTo(0, H);
+  history.forEach((v, i) => {
+    ctx.lineTo(i * step, H - (v / 100) * (H - 4));
+  });
+  ctx.lineTo(W, H);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(57,255,20,0.15)';
+  ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  ctx.strokeStyle = '#39ff14';
+  ctx.lineWidth = 1.5;
+  ctx.shadowBlur = 6;
+  ctx.shadowColor = '#39ff14';
+  history.forEach((v, i) => {
+    const x = i * step;
+    const y = H - (v / 100) * (H - 4);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+}
+
+// ===== GAUGE HELPERS =====
+function setGauge(arcId, numId, value, max) {
+  const pct = Math.min(value / max, 1);
+  const dash = pct * CIRCUMFERENCE;
+  const arc = document.getElementById(arcId);
+  const num = document.getElementById(numId);
+  arc.setAttribute('stroke-dasharray', `${dash} ${CIRCUMFERENCE - dash}`);
+  num.textContent = Math.round(value);
+
+  arc.className = 'gauge-arc';
+  if (pct > 0.85) arc.classList.add('danger');
+  else if (pct > 0.65) arc.classList.add('warn');
+}
+
+// ===== BAR HELPERS =====
+function setBar(barId, pct) {
+  const bar = document.getElementById(barId);
+  bar.style.width = pct + '%';
+  bar.className = 'bar-fill';
+  if (pct > 85) bar.classList.add('danger');
+  else if (pct > 65) bar.classList.add('warn');
+}
+
+function setLed(id, ok, amber) {
+  const led = document.getElementById(id);
+  led.className = 'led';
+  if (!ok) led.classList.add('red');
+  else if (amber) led.classList.add('amber');
+}
+
+// ===== FETCH & UPDATE =====
+let lastQuoteTime = 0;
+let cachedQuote = '"War. War never changes."';
+
+async function fetchStats() {
+  try {
+    const res = await fetch(API);
+    if (!res.ok) throw new Error();
+    const d = await res.json();
+
+    // Header
+    document.getElementById('hostname-hdr').textContent = (d.hostname || '---').toUpperCase();
+    document.getElementById('ip-hdr').textContent = d.ip || '---';
+    document.getElementById('ssid-hdr').textContent = d.wifi_ssid || '---';
+
+    // Bars
+    setBar('cpu-bar', d.cpu_percent);
+    setBar('ram-bar', d.ram_percent);
+    const tempPct = d.cpu_temp ? (d.cpu_temp / 100) * 100 : 0;
+    setBar('temp-bar', tempPct);
+    setBar('disk-bar', d.disk?.percent || 0);
+
+    // Text labels
+    document.getElementById('cpu-val').textContent = d.cpu_percent.toFixed(1) + '%';
+    document.getElementById('ram-val').textContent = d.ram_percent.toFixed(1) + '%';
+    document.getElementById('temp-val').textContent = d.cpu_temp ? d.cpu_temp + '°C' : '--°C';
+    document.getElementById('disk-val').textContent = (d.disk?.percent || '--') + '%';
+
+    // Gauges
+    setGauge('cpu-arc', 'cpu-gauge-num', d.cpu_percent, 100);
+    setGauge('ram-arc', 'ram-gauge-num', d.ram_percent, 100);
+    if (d.cpu_temp) setGauge('temp-arc', 'temp-gauge-num', d.cpu_temp, 100);
+
+    // Network table
+    document.getElementById('net-ip').textContent = d.ip || '---';
+    document.getElementById('net-ssid').textContent = d.wifi_ssid || '---';
+    document.getElementById('net-host').textContent = (d.hostname || '---').toUpperCase();
+    document.getElementById('net-ram').textContent =
+      d.ram_total_mb ? `${d.ram_used_mb}MB / ${d.ram_total_mb}MB` : '---';
+
+    // Right panel
+    document.getElementById('uptime-val').textContent = d.uptime || '--h --m';
+    setBar('disk-bar2', d.disk?.percent || 0);
+    document.getElementById('disk-info-val').textContent =
+      d.disk ? `${d.disk.used_gb} / ${d.disk.total_gb} GB` : '-- / -- GB';
+
+    // LEDs
+    setLed('led-cpu', true, d.cpu_percent > 75);
+    setLed('led-mem', d.ram_percent < 90, d.ram_percent > 70);
+    setLed('led-temp', !d.cpu_temp || d.cpu_temp < 80, d.cpu_temp > 65);
+
+    // Activity graph
+    history.push(d.cpu_percent);
+    if (history.length > 120) history.shift();
+    drawGraph();
+
+    // Quote (refresh every 30s)
+    const now = Date.now();
+    if (d.quote && now - lastQuoteTime > 30000) {
+      cachedQuote = `"${d.quote}"`;
+      document.getElementById('quote-text').textContent = cachedQuote;
+      lastQuoteTime = now;
+    }
+
+  } catch (e) {
+    // Server not available — show offline state
+    document.getElementById('net-ip').textContent = 'SERVER OFFLINE';
+  }
+}
+
+// ===== BOOT SEQUENCE =====
+const bootLines = [
+  '> ROBCO INDUSTRIES (TM) TERMLINK PROTOCOL',
+  '> COPYRIGHT 2075-2077 ROBCO INDUSTRIES',
+  '> INITIALIZING HARDWARE...',
+  '> CPU LINK: OK',
+  '> MEMORY: OK',
+  '> NETWORK SUBSYSTEM: OK',
+  '> THERMAL MONITORS: ONLINE',
+  '> LOADING PIP-OS v7.1.0.8...',
+  '> AUTHENTICATING VAULT-TEC LICENSE...',
+  '> SYSTEM NOMINAL. WELCOME.',
+];
+
+function runBoot() {
+  const log = document.getElementById('boot-log');
+  let i = 0;
+  function addLine() {
+    if (i >= bootLines.length) {
+      // Fade out overlay
+      const overlay = document.getElementById('boot-overlay');
+      overlay.style.transition = 'opacity 0.8s ease';
+      overlay.style.opacity = '0';
+      setTimeout(() => { overlay.style.display = 'none'; fetchStats(); }, 800);
+      return;
+    }
+    const div = document.createElement('div');
+    div.className = 'boot-line';
+    div.textContent = bootLines[i];
+    div.style.animationDelay = '0s';
+    log.appendChild(div);
+    i++;
+    setTimeout(addLine, 180 + Math.random() * 120);
+  }
+  setTimeout(addLine, 600);
+}
+
+// ===== PANEL TOUCH EXPAND =====
+const overlay      = document.getElementById('panel-overlay');
+const overlayClose = document.getElementById('panel-overlay-close');
+const overlayTitle = document.getElementById('panel-overlay-title');
+const overlayBody  = document.getElementById('panel-overlay-content');
+
+// Live data cache updated by fetchStats
+const liveData = {};
+
+// Define what each panel shows when expanded
+const panelDefs = {
+  'stats': {
+    title: '◈ SYSTEM VITALS — EXPANDED',
+    render: () => `
+      <div class="ov-bar-wrap">
+        <div class="ov-bar-label"><span>CPU LOAD</span><span>${liveData.cpu_percent?.toFixed(1) ?? '--'}%</span></div>
+        <div class="ov-bar-track"><div class="ov-bar-fill ${barClass(liveData.cpu_percent)}" style="width:${liveData.cpu_percent ?? 0}%"></div></div>
+      </div>
+      <div class="ov-bar-wrap">
+        <div class="ov-bar-label"><span>MEMORY</span><span>${liveData.ram_percent?.toFixed(1) ?? '--'}% &nbsp;(${liveData.ram_used_mb ?? '--'} / ${liveData.ram_total_mb ?? '--'} MB)</span></div>
+        <div class="ov-bar-track"><div class="ov-bar-fill ${barClass(liveData.ram_percent)}" style="width:${liveData.ram_percent ?? 0}%"></div></div>
+      </div>
+      <div class="ov-bar-wrap">
+        <div class="ov-bar-label"><span>CPU TEMPERATURE</span><span>${liveData.cpu_temp ?? '--'}°C</span></div>
+        <div class="ov-bar-track"><div class="ov-bar-fill ${barClass(liveData.cpu_temp, 100)}" style="width:${liveData.cpu_temp ?? 0}%"></div></div>
+      </div>
+      <div class="ov-bar-wrap">
+        <div class="ov-bar-label"><span>DISK USED</span><span>${liveData.disk?.percent ?? '--'}% &nbsp;(${liveData.disk?.used_gb ?? '--'} / ${liveData.disk?.total_gb ?? '--'} GB)</span></div>
+        <div class="ov-bar-track"><div class="ov-bar-fill ${barClass(liveData.disk?.percent)}" style="width:${liveData.disk?.percent ?? 0}%"></div></div>
+      </div>
+    `
+  },
+  'monitor': {
+    title: '◈ OPERATIONAL STATUS — EXPANDED',
+    render: () => `
+      <div class="ov-row"><span class="ov-key">CPU LOAD</span><span class="ov-val">${liveData.cpu_percent?.toFixed(1) ?? '--'}%</span></div>
+      <div class="ov-row"><span class="ov-key">MEMORY USED</span><span class="ov-val">${liveData.ram_used_mb ?? '--'} MB / ${liveData.ram_total_mb ?? '--'} MB</span></div>
+      <div class="ov-row"><span class="ov-key">MEMORY %</span><span class="ov-val">${liveData.ram_percent?.toFixed(1) ?? '--'}%</span></div>
+      <div class="ov-row"><span class="ov-key">CPU TEMP</span><span class="ov-val">${liveData.cpu_temp ?? '--'} °C</span></div>
+      <div class="ov-row"><span class="ov-key">HOSTNAME</span><span class="ov-val">${(liveData.hostname ?? '---').toUpperCase()}</span></div>
+      <div class="ov-row"><span class="ov-key">IP ADDRESS</span><span class="ov-val">${liveData.ip ?? '---'}</span></div>
+      <div class="ov-row"><span class="ov-key">WIFI SSID</span><span class="ov-val">${liveData.wifi_ssid ?? '---'}</span></div>
+      <div class="ov-row"><span class="ov-key">UPTIME</span><span class="ov-val">${liveData.uptime ?? '---'}</span></div>
+    `
+  },
+  'unit': {
+    title: '◈ UNIT INFO — EXPANDED',
+    render: () => `
+      <div class="ov-row"><span class="ov-key">UPTIME</span><span class="ov-val">${liveData.uptime ?? '---'}</span></div>
+      <div class="ov-row"><span class="ov-key">HOSTNAME</span><span class="ov-val">${(liveData.hostname ?? '---').toUpperCase()}</span></div>
+      <div class="ov-row"><span class="ov-key">IP ADDRESS</span><span class="ov-val">${liveData.ip ?? '---'}</span></div>
+      <div class="ov-row"><span class="ov-key">WIFI NETWORK</span><span class="ov-val">${liveData.wifi_ssid ?? '---'}</span></div>
+      <div class="ov-bar-wrap" style="margin-top:10px">
+        <div class="ov-bar-label"><span>DISK</span><span>${liveData.disk?.used_gb ?? '--'} / ${liveData.disk?.total_gb ?? '--'} GB</span></div>
+        <div class="ov-bar-track"><div class="ov-bar-fill ${barClass(liveData.disk?.percent)}" style="width:${liveData.disk?.percent ?? 0}%"></div></div>
+      </div>
+    `
+  }
+};
+
+function barClass(val, max = 100) {
+  const pct = (val / max) * 100;
+  if (pct > 85) return 'danger';
+  if (pct > 65) return 'warn';
+  return '';
+}
+
+function openPanel(panelKey) {
+  const def = panelDefs[panelKey];
+  if (!def) return;
+  overlayTitle.textContent = def.title;
+  overlayBody.innerHTML = def.render();
+  overlay.classList.remove('closing');
+  overlay.style.display = 'block';
+}
+
+function closeOverlay() {
+  overlay.classList.add('closing');
+  overlay.addEventListener('animationend', () => {
+    overlay.style.display = 'none';
+    overlay.classList.remove('closing');
+  }, { once: true });
+}
+
+// Attach to panels
+document.querySelectorAll('.panel').forEach(panel => {
+  const key = panel.dataset.panelKey;
+  if (!key) return;
+
+  // Press visual feedback
+  const pressStart = () => panel.classList.add('pressed');
+  const pressEnd = () => {
+    panel.classList.remove('pressed');
+    openPanel(key);
+  };
+
+  // Touch events (primary for touchscreen)
+  panel.addEventListener('touchstart', pressStart, { passive: true });
+  panel.addEventListener('touchend', e => { e.preventDefault(); pressEnd(); }, { passive: false });
+
+  // Mouse fallback
+  panel.addEventListener('mousedown', pressStart);
+  panel.addEventListener('mouseup', pressEnd);
+  panel.addEventListener('mouseleave', () => panel.classList.remove('pressed'));
+});
+
+// Close button
+overlayClose.addEventListener('click', closeOverlay);
+overlayClose.addEventListener('touchend', e => { e.preventDefault(); closeOverlay(); }, { passive: false });
+
+// Close on overlay background tap (outside content)
+overlay.addEventListener('touchend', e => {
+  if (e.target === overlay) { e.preventDefault(); closeOverlay(); }
+}, { passive: false });
+
+// Cache live data for overlay use
+const _origFetchStats = fetchStats;
+// Patch fetchStats to also populate liveData
+const _patchedFetch = async () => {
+  try {
+    const res = await fetch(API);
+    if (!res.ok) throw new Error();
+    const d = await res.json();
+    Object.assign(liveData, d);
+  } catch(e) {}
+  await _origFetchStats();
+};
+// Override the interval to use patched version
+clearInterval(window._statsInterval);
+window._statsInterval = setInterval(_patchedFetch, 3000);
+_patchedFetch();
+
+</script>
+</body>
+</html>
