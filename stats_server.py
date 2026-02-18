@@ -1,21 +1,26 @@
 #!/usr/bin/env python3
 """
 Pip-Boy Stats Server
-Serves system stats as JSON for the Fallout status dashboard.
+Serves system stats as JSON AND the dashboard HTML.
 Run with: python3 stats_server.py
-Listens on http://localhost:5000/stats
+Dashboard: http://<pi-ip>:5000
+Stats API: http://<pi-ip>:5000/stats
 """
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
 import psutil
 import subprocess
 import socket
 import datetime
 import random
+import os
 
 app = Flask(__name__)
 CORS(app)
+
+# Directory where pipboy.html lives (same folder as this script)
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 VAULT_QUOTES = [
     "War. War never changes.",
@@ -80,6 +85,10 @@ def get_disk():
         "percent": usage.percent
     }
 
+@app.route('/')
+def index():
+    return send_from_directory(SCRIPT_DIR, 'pipboy.html')
+
 @app.route('/stats')
 def stats():
     cpu_percent = psutil.cpu_percent(interval=0.5)
@@ -110,5 +119,8 @@ def health():
     return jsonify({"status": "ok"})
 
 if __name__ == '__main__':
-    print("🟢 Pip-Boy Stats Server running on http://localhost:5000")
+    ip = socket.gethostbyname(socket.gethostname())
+    print(f"🟢 NERD-O-VISION 5000 running!")
+    print(f"   Local:   http://localhost:5000")
+    print(f"   Network: http://{ip}:5000")
     app.run(host='0.0.0.0', port=5000, debug=False)
