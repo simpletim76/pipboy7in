@@ -1327,6 +1327,19 @@ const _patchedFetch = async () => {
 // Override the interval to use patched version
 clearInterval(window._statsInterval);
 window._statsInterval = setInterval(_patchedFetch, 3000);
+
+// Failsafe: force dismiss boot overlay after 8 seconds no matter what
+setTimeout(() => {
+  const bootOverlay = document.getElementById('boot-overlay');
+  if (bootOverlay && bootOverlay.style.display !== 'none') {
+    bootOverlay.style.transition = 'opacity 0.5s ease';
+    bootOverlay.style.opacity = '0';
+    setTimeout(() => { bootOverlay.style.display = 'none'; }, 500);
+  }
+}, 8000);
+
+runBoot();
+drawGraph();
 _patchedFetch();
 
 </script>
