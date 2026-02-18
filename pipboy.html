@@ -1173,14 +1173,17 @@ const bootLines = [
 
 function runBoot() {
   const log = document.getElementById('boot-log');
+  const bootOverlay = document.getElementById('boot-overlay');
   let i = 0;
   function addLine() {
     if (i >= bootLines.length) {
-      // Fade out overlay
-      const overlay = document.getElementById('boot-overlay');
-      overlay.style.transition = 'opacity 0.8s ease';
-      overlay.style.opacity = '0';
-      setTimeout(() => { overlay.style.display = 'none'; fetchStats(); }, 800);
+      // Fade out overlay — dismiss regardless of stats fetch success
+      bootOverlay.style.transition = 'opacity 0.8s ease';
+      bootOverlay.style.opacity = '0';
+      setTimeout(() => {
+        bootOverlay.style.display = 'none';
+        fetchStats();
+      }, 800);
       return;
     }
     const div = document.createElement('div');
