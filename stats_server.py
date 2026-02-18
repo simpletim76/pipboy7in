@@ -15,6 +15,16 @@ import socket
 import datetime
 import random
 import os
+import urllib.request
+import urllib.error
+import json as json_lib
+
+# ── REMOTE HOST CONFIG ──────────────────────────────────────────────────────
+PIHOLE_HOST      = "192.168.1.2"          # Change to your Pi-hole IP
+PIHOLE_API_TOKEN = "your_api_token_here"  # Pi-hole API token (Settings > API)
+DOCKER_HOST      = "192.168.1.3"          # Change to your Docker host IP
+DOCKER_PORT      = 2375                   # Docker TCP API port (unauthenticated)
+# ────────────────────────────────────────────────────────────────────────────
 
 app = Flask(__name__)
 CORS(app)
@@ -117,6 +127,90 @@ def stats():
 @app.route('/health')
 def health():
     return jsonify({"status": "ok"})
+
+@app.route('/pihole')
+def pihole():
+    """Fetch Pi-hole summary stats. Tries v6 API first, falls back to v5."""
+    result = {
+        "online": False,
+        "error": None,
+        "queries_today": None,
+        "ads_blocked_today": None,
+        "ads_percentage_today": None,
+        "gravity_count": None,
+        "status": "unknown"
+    }
+    try:
+        # ── Try Pi-hole v6 API first ──────────────────────────────────────
+        url_v6 = f"http://{PIHOLE_HOST}/api/stats/summary"
+        req = urllib.request.Request(
+            url_v6,
+            headers={"X-FTL-Auth": PIHOLE_API_TOKEN}
+        )
+        with urllib.request.urlopen(req, timeout=4) as resp:
+            data = json_lib.loads(resp.read())
+        queries = data.get("queries", {})
+        result.update({
+            "online": True,
+            "queries_today": queries.get("total", 0),
+            "ads_blocked_today": queries.get("blocked", 0),
+            "ads_percentage_today": round(float(queries.get("percent_blocked", 0.0)), 1),
+            "gravity_count": data.get("gravity", {}).get("domains_being_blocked", 0),
+            "status": "enabled"
+        })
+    except Exception as e_v6:
+        # ── Fall back to Pi-hole v5 API ───────────────────────────────────
+        try:
+            url_v5 = (
+                f"http://{PIHOLE_HOST}/admin/api.php"
+                f"?summaryRaw&auth={PIHOLE_API_TOKEN}"
+            )
+            with urllib.request.urlopen(url_v5, timeout=4) as resp:
+                data = json_lib.loads(resp.read())
+            result.update({
+                "online": True,
+                "queries_today": data.get("dns_queries_today", 0),
+                "ads_blocked_today": data.get("ads_blocked_today", 0),
+                "ads_percentage_today": round(float(data.get("ads_percentage_today", 0.0)), 1),
+                "gravity_count": data.get("domains_being_blocked", 0),
+                "status": data.get("status", "unknown")
+            })
+        except Exception as e_v5:
+            result["error"] = f"v6: {str(e_v6)[:60]} | v5: {str(e_v5)[:60]}"
+    return jsonify(result)
+
+@app.route('/docker')
+def docker_containers():
+    """Fetch container list from Docker TCP API."""
+    result = {
+        "online": False,
+        "error": None,
+        "containers": []
+    }
+    try:
+        url = f"http://{DOCKER_HOST}:{DOCKER_PORT}/containers/json?all=true"
+        with urllib.request.urlopen(url, timeout=4) as resp:
+            data = json_lib.loads(resp.read())
+        containers = []
+        for c in data:
+            raw_names = c.get("Names", [])
+            name = raw_names[0].lstrip("/") if raw_names else c.get("Id", "")[:12]
+            containers.append({
+                "name": name,
+                "image": c.get("Image", "unknown"),
+                "status": c.get("Status", ""),
+                "state": c.get("State", "")
+            })
+        # Sort: running first, then paused, then everything else
+        state_order = {"running": 0, "paused": 1}
+        containers.sort(key=lambda x: state_order.get(x["state"], 2))
+        result.update({
+            "online": True,
+            "containers": containers
+        })
+    except Exception as e:
+        result["error"] = str(e)[:120]
+    return jsonify(result)
 
 if __name__ == '__main__':
     ip = socket.gethostbyname(socket.gethostname())
