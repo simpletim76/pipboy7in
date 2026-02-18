@@ -25,7 +25,7 @@ echo ""
 echo "[1/4] Checking system packages..."
 sudo apt-get update -qq
 sudo apt-get install -y -qq python3-pip python3-venv python3-psutil \
-    wireless-tools chromium-browser unclutter 2>/dev/null || true
+    wireless-tools unclutter 2>/dev/null || true
 
 # ---- 2. Python virtual environment ----
 echo "[2/4] Setting up Python environment..."
@@ -62,8 +62,27 @@ unclutter -idle 0.1 -root &
 xrandr --output HDMI-1 --mode 1024x600 2>/dev/null || \
 xrandr --output DSI-1 --mode 1024x600 2>/dev/null || true
 
+# Find chromium binary (Pi OS uses 'chromium', some distros use 'chromium-browser')
+CHROMIUM_BIN=""
+for bin in chromium chromium-browser chromium-browser-v2; do
+  if command -v "$bin" &>/dev/null; then
+    CHROMIUM_BIN="$bin"
+    break
+  fi
+done
+
+if [ -z "$CHROMIUM_BIN" ]; then
+  echo "  ✗ Chromium not found. Installing..."
+  sudo apt-get install -y -qq chromium 2>/dev/null || \
+  sudo apt-get install -y -qq chromium-browser 2>/dev/null || true
+  command -v chromium &>/dev/null && CHROMIUM_BIN="chromium"
+  command -v chromium-browser &>/dev/null && CHROMIUM_BIN="chromium-browser"
+fi
+
+echo "      Using browser: $CHROMIUM_BIN"
+
 # Launch Chromium kiosk
-chromium-browser \
+$CHROMIUM_BIN \
     --kiosk \
     --noerrdialogs \
     --disable-infobars \
